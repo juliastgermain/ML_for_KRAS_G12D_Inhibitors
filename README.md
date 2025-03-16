@@ -19,4 +19,4 @@ Run the transform_fda.ipnyb file on the fda.csv file which we got from the ChEMB
 
 Run the prediction_code.ipnyb file with the FDA_features.csv and training_descriptors_no_outliers.csv, you will receive the all_results.csv. This code outputs a file which contains the best 13 molecules that appeared over 50 iterations of runs. Values are IC50 so we use the code of pIC50 to change the values. Then we run the prediction code with Muhamed"s file for training and predict for fda_original_Hyb_Fetures3.csv
 
-maybe see how to change the code to submit more streamlined results
+maybe see how to change the code to submit more streamlined results.
