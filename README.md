@@ -3,10 +3,10 @@ This repository contains the code and datasets for predicting the pIC50 value of
 
 The code was authored by:
 
-Bebensee, David
-Fuschi, Gianluca
-Moawad, Christophe Mina Fahmy
-St.Germain, Julia
+Bebensee, David <br>
+Fuschi, Gianluca <br>
+Moawad, Christophe Mina Fahmy <br>
+St.Germain, Julia <br>
 
 Instructions on use
 All of the outputs are already available as .csv files so there is no need to rerun any of the code. But if you would want to, here is the order and what each file does:
