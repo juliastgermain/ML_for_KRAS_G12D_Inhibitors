@@ -582,8 +582,6 @@ molecules_df = pd.DataFrame(sorted_values[0:11],
 
                             columns=['chembl_id', 'Predicted_Value'])
 
-
-
-
+molecules_df['Predicted_Value'] = molecules_df['Predicted_Value'].str[0].astype(float)
 
 molecules_df.to_csv('NN_molecules_Newfeatures_G12C.csv')

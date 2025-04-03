@@ -24,7 +24,9 @@ import argparse
 
 
 
-DF = pd.read_csv('/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/merged_features_IC50_gtpase_kras.csv')
+DF = pd.read_csv('C:/Users/Gianluca/OneDrive/Documenti/University/3 '
+                 'II/Project_Y3/Raw '
+                 'Files/merged_features_IC50_gtpase_kras.csv')
 
 DF = DF.dropna()
 
@@ -500,7 +502,7 @@ plt.tight_layout()
 
 plt.savefig(f"Actual_vs_Predicted_G12D_SV.png", dpi=300)
 
-plt.show()
+
 
 
 
@@ -508,7 +510,9 @@ plt.show()
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("C:/Users/Gianluca/OneDrive/Documenti"
+                       "/University/3 II/Project_Y3/Raw "
+                       "Files/FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
@@ -591,7 +595,6 @@ molecules_df = pd.DataFrame(sorted_values[0:11],
                             columns=['chembl_id', 'Predicted_Value'])
 
 
-
-
+molecules_df['Predicted_Value'] = molecules_df['Predicted_Value'].str[0].astype(float)
 
 molecules_df.to_csv('NN_molecules_Newfeatures_GTPase_KRAS.csv')
