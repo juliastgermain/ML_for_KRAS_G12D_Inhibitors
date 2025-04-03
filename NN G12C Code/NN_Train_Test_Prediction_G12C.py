@@ -14,7 +14,9 @@ import argparse
 
 
 
-DF = pd.read_csv('../../pycharm/new_merged_features_IC50_g12c.csv')
+DF = pd.read_csv("C:/Users/Gianluca/OneDrive/Documenti/University/3 "
+                 "II/Project_Y3/Raw "
+                 "Files/new_merged_features_IC50_g12c.csv")
 DF = DF.dropna()
 
 n_folds = 5
@@ -489,7 +491,6 @@ plt.tight_layout()
 
 plt.savefig(f"Actual_vs_Predicted_G12C_SV.png", dpi=300)
 
-plt.show()
 
 
 
@@ -497,7 +498,9 @@ plt.show()
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("../../pycharm/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("C:/Users/Gianluca/OneDrive/Documenti"
+                       "/University/3 II/Project_Y3/Raw "
+                       "Files/FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
@@ -575,7 +578,7 @@ for chembl_id, predicted_value in zip(chembl_id_column,
 
 sorted_values = sorted(predicted_values.items(), key=lambda x: x[1])
 
-molecules_df = pd.DataFrame(sorted_values,
+molecules_df = pd.DataFrame(sorted_values[0:11],
 
                             columns=['chembl_id', 'Predicted_Value'])
 
