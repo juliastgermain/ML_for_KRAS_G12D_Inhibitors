@@ -14,9 +14,7 @@ import argparse
 
 
 
-DF = pd.read_csv("C:/Users/Gianluca/OneDrive/Documenti/University/3 "
-                 "II/Project_Y3/Raw "
-                 "Files/new_merged_features_IC50_g12c.csv")
+DF = pd.read_csv("/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/new_merged_features_IC50_g12c.csv")
 DF = DF.dropna()
 
 n_folds = 5
@@ -27,7 +25,7 @@ DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
 
 DF['IC50 (nM)'] = DF['IC50 (nM)'].str.lstrip('<>').astype(float)
 
-DF = DF[(DF['FC'] == 0) & (DF['IC50 (nM)'] <= 10)]
+DF = DF[(DF['FC'] == 0) & (DF['IC50 (nM)'] <= 5000)]
 
 DF = DF.sample(frac=n_folds, replace=True, random_state=42)
 
@@ -498,9 +496,7 @@ plt.savefig(f"Actual_vs_Predicted_G12C_SV.png", dpi=300)
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("C:/Users/Gianluca/OneDrive/Documenti"
-                       "/University/3 II/Project_Y3/Raw "
-                       "Files/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
