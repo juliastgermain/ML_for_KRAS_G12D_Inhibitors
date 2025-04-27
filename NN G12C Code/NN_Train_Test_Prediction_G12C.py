@@ -25,7 +25,7 @@ DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
 
 DF['IC50 (nM)'] = DF['IC50 (nM)'].str.lstrip('<>').astype(float)
 
-DF = DF[(DF['FC'] == 0) & (DF['IC50 (nM)'] <= 10000)]
+DF = DF[(DF['FC'] == 0) & (DF['IC50 (nM)'] <= 5000)]
 
 DF = DF.sample(frac=n_folds, replace=True, random_state=42)
 
