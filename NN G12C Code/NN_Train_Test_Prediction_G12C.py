@@ -14,57 +14,52 @@ import argparse
 
 
 
-DF = pd.read_csv('../../pycharm/new_merged_features_IC50_g12c.csv')
+DF = pd.read_csv('/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/new_merged_features_IC50_g12c.csv')
 DF = DF.dropna()
 
 n_folds = 5
 
+def pIC50(input):
+    pIC50 = []
+
+    input["IC50 (nM)"] = pd.to_numeric(input["IC50 (nM)"],errors='coerce')
+
+    for i in input["IC50 (nM)"]:
+        molar = i*(10**-9) # Converts nM to M
+        pIC50.append(-np.log10(molar))
+
+    input['pIC50'] = pIC50
+    x = input["pIC50"]
+
+    return x
+
+
 DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
 
 # Filter and sample data before splitting
-
 DF['IC50 (nM)'] = DF['IC50 (nM)'].str.lstrip('<>').astype(float)
 
-DF = DF[(DF['FC'] == 0) & (DF['IC50 (nM)'] <= 10)]
-
-DF = DF.sample(frac=n_folds, replace=True, random_state=42)
-
-
-
+DF = DF[(DF['FC'] == 0)] #& (DF['IC50 (nM)'] <= 1)]
 y = DF['IC50 (nM)']
 
 X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles"])
 
+DF['pIC50'] = pIC50(DF)  # New column
+y = DF['pIC50']  # <-- Now using correct column
+X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles", "pIC50"])  # Drop old IC50 and new pIC50
+print(DF.head())
 
-
-# turn y into a dataframe for scaling
-
-
-
-y_df = pd.DataFrame({'IC50 (nM)': y})
-
-
-
-y_df.head()
-
-
-
-y = y_df
+#DF = DF.sample(frac=n_folds, replace=True, random_state=42)
 
 
 
 # Scale the data
-
+# Scale X and y properly
 scaler_X = StandardScaler()
-
 X_scaled = scaler_X.fit_transform(X)
 
-
-
-scaler_y = MinMaxScaler()
-
-y_scaled = scaler_y.fit_transform(y)
-
+scaler_y = StandardScaler()  # Changed to StandardScaler
+y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
 
 # joblib.dump(scaler_X, f"scaler_X_{chembel_id}_SV.pkl")
@@ -97,32 +92,19 @@ import torch.nn.functional as F
 
 # Define the neural network model
 
+# Update the model definition to include Sigmoid activation
 class MultiOutputRegressor(nn.Module):
-
-    def __init__(self, input_dim, hidden_dim, output_dim,
-
-                 num_hidden_layers, dropout_rate):
-
+    def __init__(self, input_dim, hidden_dim, output_dim, num_hidden_layers, dropout_rate):
         super(MultiOutputRegressor, self).__init__()
-
         layers = [nn.Linear(input_dim, hidden_dim), nn.ReLU()]
-
         for _ in range(num_hidden_layers - 1):
-
-            layers += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
-
-                       nn.Dropout(dropout_rate)]
-
+            layers += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Dropout(dropout_rate)]
         layers.append(nn.Linear(hidden_dim, output_dim))
-
+        #layers.append(nn.Sigmoid())  # Add Sigmoid activation here
         self.model = nn.Sequential(*layers)
 
-
-
     def forward(self, x):
-
         return self.model(x)
-
 
 
 for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
@@ -497,7 +479,7 @@ plt.show()
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("../../pycharm/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
@@ -573,9 +555,9 @@ for chembl_id, predicted_value in zip(chembl_id_column,
 
 
 
-sorted_values = sorted(predicted_values.items(), key=lambda x: x[1])
+sorted_values = sorted(predicted_values.items(), key=lambda x: x[1], reverse=True)
 
-molecules_df = pd.DataFrame(sorted_values,
+molecules_df = pd.DataFrame(sorted_values[0:11],
 
                             columns=['chembl_id', 'Predicted_Value'])
 
