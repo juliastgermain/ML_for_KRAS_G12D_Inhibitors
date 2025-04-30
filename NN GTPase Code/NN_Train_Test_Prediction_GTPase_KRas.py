@@ -24,57 +24,48 @@ import argparse
 
 
 
-DF = pd.read_csv('/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/merged_features_IC50_gtpase_kras.csv')
+DF = pd.read_csv('/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/merged_features_IC50_gtpase_kras.csv')
 
 DF = DF.dropna()
 
 n_folds = 5
 
+def pIC50(input):
+    pIC50 = []
+
+    input["Standard Value"] = pd.to_numeric(input["Standard Value"],errors='coerce')
+
+    for i in input["Standard Value"]:
+        molar = i*(10**-9) # Converts nM to M
+        pIC50.append(-np.log10(molar))
+
+    input['Standard Value'] = pIC50
+    x = input["Standard Value"]
+
+    return x
+
+
 DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
 
 # Filter and sample data before splitting
-
 #DF['Standard Value'] = DF['Standard Value'].str.lstrip('<>').astype(float)
 
-DF = DF[(DF['FC'] == 0) & (DF['Standard Value'] <= 10)]
-
-DF = DF.sample(frac=n_folds, replace=True, random_state=42)
-
-
-
+DF = DF[(DF['FC'] == 0)] #& (DF['IC50 (nM)'] <= 1)]
 y = DF['Standard Value']
 
-X = DF.drop(columns=["ChEMBL ID", "FC", 'Standard Value', "Smiles"])
 
-
-
-# turn y into a dataframe for scaling
-
-
-
-y_df = pd.DataFrame({'Standard Value': y})
-
-
-
-y_df.head()
-
-
-
-y = y_df
-
-
+DF['pIC50'] = pIC50(DF)  # New column
+y = DF['pIC50']  # <-- Now using correct column
+X = DF.drop(columns=["ChEMBL ID", "FC", 'Standard Value', "Smiles", "pIC50"])  # Drop old IC50 and new pIC50
 
 # Scale the data
-
+# Scale X and y properly
 scaler_X = StandardScaler()
-
 X_scaled = scaler_X.fit_transform(X)
 
+scaler_y = StandardScaler()  # Changed to StandardScaler
+y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
-
-scaler_y = MinMaxScaler()
-
-y_scaled = scaler_y.fit_transform(y)
 
 
 
@@ -508,7 +499,7 @@ plt.show()
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
@@ -584,7 +575,7 @@ for chembl_id, predicted_value in zip(chembl_id_column,
 
 
 
-sorted_values = sorted(predicted_values.items(), key=lambda x: x[1])
+sorted_values = sorted(predicted_values.items(), key=lambda x: x[1], reverse=True)
 
 molecules_df = pd.DataFrame(sorted_values[0:11],
 
