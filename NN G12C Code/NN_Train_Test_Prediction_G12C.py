@@ -14,8 +14,15 @@ import argparse
 
 
 
-DF = pd.read_csv("/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/new_merged_features_IC50_g12c.csv")
+DF = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/merged_features_IC50_g12c.csv")
+#DF = DF.dropna()
+print(len(DF))
+
+DF["IC50 (nM)"] = DF['IC50 (nM)'].drop_duplicates()
+
+
 DF = DF.dropna()
+print(len(DF))
 
 def pIC50(input):
     pIC50 = []
@@ -478,14 +485,14 @@ plt.tight_layout()
 
 plt.savefig(f"Actual_vs_Predicted_G12C_SV.png", dpi=300)
 
-
+plt.show()
 
 
 
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
