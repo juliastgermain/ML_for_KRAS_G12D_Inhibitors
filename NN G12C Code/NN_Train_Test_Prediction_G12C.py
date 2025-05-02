@@ -14,56 +14,52 @@ import argparse
 
 
 
-DF = pd.read_csv("/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/new_merged_features_IC50_g12c.csv")
-DF = DF.dropna()
+DF = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/merged_features_IC50_g12c.csv")
+#DF = DF.dropna()
+print(len(DF))
 
-n_folds = 5
+DF["IC50 (nM)"] = DF['IC50 (nM)'].drop_duplicates()
+
+
+DF = DF.dropna()
+print(len(DF))
+
+def pIC50(input):
+    pIC50 = []
+
+    input["IC50 (nM)"] = pd.to_numeric(input["IC50 (nM)"],errors='coerce')
+
+    for i in input["IC50 (nM)"]:
+        molar = i*(10**-9) # Converts nM to M
+        pIC50.append(-np.log10(molar))
+
+    input['IC50 (nM)'] = pIC50
+    x = input["IC50 (nM)"]
+
+    return x
+# Filter and sample data before splitting
+DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
+DF['IC50 (nM)'] = DF['IC50 (nM)'].str.lstrip('<>').astype(float)
+
 
 DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
 
-# Filter and sample data before splitting
 
-DF['IC50 (nM)'] = DF['IC50 (nM)'].str.lstrip('<>').astype(float)
-
-DF = DF[(DF['FC'] == 0) & (DF['IC50 (nM)'] <= 10000)]
-
-DF = DF.sample(frac=n_folds, replace=True, random_state=42)
-
-
-
+DF = DF[(DF['FC'] == 0)] #& (DF['IC50 (nM)'] <= 1)]
 y = DF['IC50 (nM)']
 
-X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles"])
 
-
-
-# turn y into a dataframe for scaling
-
-
-
-y_df = pd.DataFrame({'IC50 (nM)': y})
-
-
-
-y_df.head()
-
-
-
-y = y_df
-
-
+DF['pIC50'] = pIC50(DF)  # New column
+y = DF['pIC50']  # <-- Now using correct column
+X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles", "pIC50"])  # Drop old IC50 and new pIC50
 
 # Scale the data
-
+# Scale X and y properly
 scaler_X = StandardScaler()
-
 X_scaled = scaler_X.fit_transform(X)
 
-
-
-scaler_y = MinMaxScaler()
-
-y_scaled = scaler_y.fit_transform(y)
+scaler_y = StandardScaler()  # Changed to StandardScaler
+y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
 
 
@@ -71,7 +67,7 @@ y_scaled = scaler_y.fit_transform(y)
 
 # joblib.dump(scaler_y, f"scaler_y_{chembel_id}_SV.pkl")
 
-
+n_folds = 5
 
 # K-Fold Cross-Validation setup
 
@@ -489,14 +485,14 @@ plt.tight_layout()
 
 plt.savefig(f"Actual_vs_Predicted_G12C_SV.png", dpi=300)
 
-
+plt.show()
 
 
 
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("/Users/user/Downloads/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
