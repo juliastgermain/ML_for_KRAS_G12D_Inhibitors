@@ -53,7 +53,7 @@ y = DF['IC50 (nM)']
 DF['pIC50'] = pIC50(DF)  # New column
 y = DF['pIC50']  # <-- Now using correct column
 # insert the newly generated X
-X = pd.read_csv("C:\\Users\TheSh\Documents\Programming_in_Python_Class\PyCharmProjects\ML_for_KRAS_G12D_Inhibitors\Quality of Life\X_g12c") # Drop old IC50 and new pIC50
+X = DF.drop(columns=['IC50 (nM)', 'ChEMBL ID', 'Smiles','pIC50'])# Drop old IC50 and new pIC50
 
 from sklearn.feature_selection import VarianceThreshold
 selector = VarianceThreshold()
@@ -499,7 +499,7 @@ plt.show()
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("C:\\Users\TheSh\Documents\Programming_in_Python_Class\PyCharmProjects\ML_for_KRAS_G12D_Inhibitors\\NN GTPase Code\FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
@@ -509,9 +509,12 @@ smiles_column = fda_pred['Smiles']
 
 # Process FDA features (drop non-feature columns)
 
-X_new = fda_pred.drop(columns=["FC", "Smiles", "ChEMBL ID"],
+X_new = fda_pred.drop(columns=["Smiles", "ChEMBL ID"],
 
                       errors='ignore')
+
+X_new = selector.transform(X_new)
+X_new = pd.DataFrame(X_new)
 
 # Ensure X_new has all columns in X_train and in the correct order
 
@@ -586,3 +589,4 @@ molecules_df = pd.DataFrame(sorted_values[0:11],
 
 
 molecules_df.to_csv('NN_molecules_Newfeatures_G12C.csv')
+print("DONE")
