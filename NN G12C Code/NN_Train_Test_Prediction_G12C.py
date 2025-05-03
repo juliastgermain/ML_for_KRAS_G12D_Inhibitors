@@ -52,7 +52,8 @@ y = DF['IC50 (nM)']
 
 DF['pIC50'] = pIC50(DF)  # New column
 y = DF['pIC50']  # <-- Now using correct column
-X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles", "pIC50"])  # Drop old IC50 and new pIC50
+# insert the newly generated X
+X = pd.read_csv("C:\\Users\TheSh\Documents\Programming_in_Python_Class\PyCharmProjects\ML_for_KRAS_G12D_Inhibitors\Quality of Life\X_g12c") # Drop old IC50 and new pIC50
 
 from sklearn.feature_selection import VarianceThreshold
 selector = VarianceThreshold()
