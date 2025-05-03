@@ -14,7 +14,8 @@ import argparse
 
 
 
-DF = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/merged_features_IC50_g12c.csv")
+DF = pd.read_csv("C:\\Users\TheSh\Documents\Programming_in_Python_Class\PyCharmProjects\ML_for_KRAS_G12D_Inhibitors\Raw Files\merged_features_IC50_g12c.csv")
+
 #DF = DF.dropna()
 print(len(DF))
 
@@ -52,6 +53,11 @@ y = DF['IC50 (nM)']
 DF['pIC50'] = pIC50(DF)  # New column
 y = DF['pIC50']  # <-- Now using correct column
 X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles", "pIC50"])  # Drop old IC50 and new pIC50
+
+from sklearn.feature_selection import VarianceThreshold
+selector = VarianceThreshold()
+X = selector.fit_transform(X)
+X = pd.DataFrame(X)
 
 # Scale the data
 # Scale X and y properly
