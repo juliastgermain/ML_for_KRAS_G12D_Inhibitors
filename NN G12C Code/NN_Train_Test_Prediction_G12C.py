@@ -3,64 +3,112 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import KFold
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_squared_error
 import pandas as pd
 import numpy as np
 import joblib
 import argparse
+from itertools import combinations
 
+from sklearn.decomposition import PCA
 
+# Compare in PCA space instead of raw features
+# -------- Added Duplicate Removal Method --------
+def remove_similar_duplicates(df):
+    print(f"\n{'='*40}\nStarting duplicate removal process\n{'='*40}")
+    print(f"Original dataset shape: {df.shape}")
 
+    # Identify feature columns (exclude non-feature columns)
+    non_feature_cols = ['ChEMBL ID', 'FC', 'IC50 (nM)', 'Smiles', 'pIC50']
+    feature_cols = [col for col in df.columns if col not in non_feature_cols]
+    print(f"Number of feature columns: {len(feature_cols)}")
 
+    # Create a mask to keep rows
+    rows_to_keep = pd.Series([True] * len(df), index=df.index)
 
+    # Identify duplicated IC50 values
+    duplicated_ic50 = df['IC50 (nM)'][df['IC50 (nM)'].duplicated(keep=False)].unique()
+    print(f"Found {len(duplicated_ic50)} IC50 values with duplicates")
+
+    total_removed = 0
+
+    for ic50 in duplicated_ic50:
+        group = df[df['IC50 (nM)'] == ic50]
+        indices_to_remove = set()
+        kept_indices = set()  # Track which indices we're keeping
+
+        print(f"\nProcessing IC50 = {ic50} with {len(group)} rows")
+
+        # Sort indices to process consistently
+        sorted_indices = sorted(group.index)
+
+        for idx in sorted_indices:
+            if idx in indices_to_remove:
+                continue  # Skip already marked indices
+
+            # Compare with all subsequent indices
+            for other_idx in sorted_indices[sorted_indices.index(idx) + 1:]:
+                if other_idx in indices_to_remove:
+                    continue
+
+                row1 = df.loc[idx, feature_cols]
+                row2 = df.loc[other_idx, feature_cols]
+
+                # Calculate similarity more rigorously
+                num_differences = (row1 != row2).sum()
+                percent_similarity = (1 - num_differences / len(feature_cols)) * 100
+
+                if percent_similarity > 75:  # 95% similarity threshold
+                    print(f"Rows {idx} vs {other_idx}: {percent_similarity:.1f}% similar")
+                    indices_to_remove.add(other_idx)
+
+        # Update global mask
+        rows_to_keep.loc[list(indices_to_remove)] = False
+        total_removed += len(indices_to_remove)
+
+    print(f"\nTotal rows marked for removal: {total_removed}")
+    filtered_df = df[rows_to_keep].reset_index(drop=True)
+    print(f"Filtered dataset shape: {filtered_df.shape}")
+    return filtered_df
+
+# -------- Main Code --------
+# Load and preprocess data
 DF = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/merged_features_IC50_g12c.csv")
-#DF = DF.dropna()
-print(len(DF))
 
-DF["IC50 (nM)"] = DF['IC50 (nM)'].drop_duplicates()
+# Apply duplicate removal
+DF = remove_similar_duplicates(DF)
 
-
-DF = DF.dropna()
-print(len(DF))
-
-def pIC50(input):
-    pIC50 = []
-
-    input["IC50 (nM)"] = pd.to_numeric(input["IC50 (nM)"],errors='coerce')
-
-    for i in input["IC50 (nM)"]:
-        molar = i*(10**-9) # Converts nM to M
-        pIC50.append(-np.log10(molar))
-
-    input['IC50 (nM)'] = pIC50
-    x = input["IC50 (nM)"]
-
-    return x
-# Filter and sample data before splitting
+# Clean remaining data
 DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
 DF['IC50 (nM)'] = DF['IC50 (nM)'].str.lstrip('<>').astype(float)
 
+# Filter and process target
+DF = DF[(DF['FC'] == 0)]
 
-DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
+# Convert to pIC50
+def pIC50(input_df):
+    pIC50_values = []
+    for i in input_df["IC50 (nM)"]:
+        molar = i * (10**-9)  # Converts nM to M
+        pIC50_values.append(-np.log10(molar))
+    return pIC50_values
 
+DF['pIC50'] = pIC50(DF)
+y = DF['pIC50']
+X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles", "pIC50"])
 
-DF = DF[(DF['FC'] == 0)] #& (DF['IC50 (nM)'] <= 1)]
-y = DF['IC50 (nM)']
+#pca = PCA(n_components=0.95)
+#reduced_features = pca.fit_transform(DF[X])
 
-
-DF['pIC50'] = pIC50(DF)  # New column
-y = DF['pIC50']  # <-- Now using correct column
-X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles", "pIC50"])  # Drop old IC50 and new pIC50
-
-# Scale the data
-# Scale X and y properly
+# Scaling
 scaler_X = StandardScaler()
 X_scaled = scaler_X.fit_transform(X)
-
-scaler_y = StandardScaler()  # Changed to StandardScaler
+scaler_y = StandardScaler()
 y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
+# Rest of the model code remains the same...
+# [Keep the existing neural network setup, training loop, and evaluation code]
 
 
 # joblib.dump(scaler_X, f"scaler_X_{chembel_id}_SV.pkl")
@@ -94,92 +142,83 @@ import torch.nn.functional as F
 # Define the neural network model
 
 class MultiOutputRegressor(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_hidden_layers, dropout_rate):
+        super().__init__()
+        layers = [
+            nn.Linear(input_dim, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(0.3)
+        ]
 
-    def __init__(self, input_dim, hidden_dim, output_dim,
-
-                 num_hidden_layers, dropout_rate):
-
-        super(MultiOutputRegressor, self).__init__()
-
-        layers = [nn.Linear(input_dim, hidden_dim), nn.ReLU()]
-
+        # Add residual blocks
         for _ in range(num_hidden_layers - 1):
+            layers += [
+                nn.Linear(512, 512),
+                nn.BatchNorm1d(512),
+                nn.ReLU(),
+                nn.Dropout(dropout_rate)
+            ]
 
-            layers += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
-
-                       nn.Dropout(dropout_rate)]
-
-        layers.append(nn.Linear(hidden_dim, output_dim))
+        layers.append(nn.Linear(512, output_dim))
 
         self.model = nn.Sequential(*layers)
+        self._init_weights()
 
-
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
+                nn.init.constant_(m.bias, 0.1)
 
     def forward(self, x):
-
         return self.model(x)
 
 
 
 for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
-
     print(f"\nFold {fold + 1}/{n_folds}")
 
-
-
-    # Split data into training and validation sets for the current fold
-
+    # Split data
     X_train, X_val = X_scaled[train_idx], X_scaled[val_idx]
-
     y_train, y_val = y_scaled[train_idx], y_scaled[val_idx]
 
-
-
     # Convert to tensors
-
     X_train_tensor = torch.from_numpy(X_train).float()
-
     y_train_tensor = torch.from_numpy(y_train).float()
-
     X_val_tensor = torch.from_numpy(X_val).float()
-
     y_val_tensor = torch.from_numpy(y_val).float()
 
-
-
-    # Model, loss, optimizer, and scheduler settings
-
+    # --- Model Definition MUST COME FIRST ---
     input_dim = X_train_tensor.shape[1]
-
-    hidden_dim = 256
-
-    num_hidden_layers = 4
-
+    hidden_dim = 512  # Increased capacity
+    num_hidden_layers = 6
+    dropout_rate = 0.3
     output_dim = y_train_tensor.shape[1]
 
-    dropout_rate = 0.0
+    model = MultiOutputRegressor(input_dim, hidden_dim, output_dim,
+                                num_hidden_layers, dropout_rate)
 
+    # --- NOW Define Optimizer/Scheduler ---
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.AdamW(model.parameters(),
+                                 lr=0.001,
+                                 weight_decay=1e-5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='min',
+        factor=0.5,
+        patience=5,
+        verbose=True
+    )
 
-
-    model = MultiOutputRegressor(input_dim, hidden_dim, output_dim, num_hidden_layers, dropout_rate)
-
-    criterion = nn.SmoothL1Loss(beta=1.0)  # Huber loss
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0041, weight_decay=1e-6)
-
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
-
-
-
+    # --- Rest of training loop ---
     # Prepare DataLoader
-
     train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
-
     val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
-
     train_loader = DataLoader(train_dataset, batch_size=1024, shuffle=True)
-
     val_loader = DataLoader(val_dataset, batch_size=1024, shuffle=False)
+
 
 
 
@@ -257,7 +296,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
 
 
 
-        scheduler.step()
+        scheduler.step(val_losses[-1])  # Pass the validation loss
 
 
 
