@@ -578,7 +578,7 @@ for chembl_id, predicted_value in zip(chembl_id_column,
 
 
 
-sorted_values = sorted(predicted_values.items(), key=lambda x: x[1])
+sorted_values = sorted(predicted_values.items(), key=lambda x: x[1], reverse=True)
 
 molecules_df = pd.DataFrame(sorted_values[0:11],
 
@@ -588,5 +588,5 @@ molecules_df = pd.DataFrame(sorted_values[0:11],
 
 
 
-molecules_df.to_csv('NN_molecules_Newfeatures_G12C.csv')
+molecules_df.to_csv('NN_molecules_Newfeatures_G12C(1).csv')
 print("DONE")
