@@ -19,7 +19,7 @@ DF = pd.read_csv("C:\\Users\TheSh\Documents\Programming_in_Python_Class\PyCharmP
 #DF = DF.dropna()
 print(len(DF))
 
-DF["IC50 (nM)"] = DF['IC50 (nM)'].drop_duplicates()
+DF["IC50 (nM)"] = DF[DF['IC50 (nM)'].drop_duplicates()]
 
 
 DF = DF.dropna()
