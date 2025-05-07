@@ -7,95 +7,107 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import r2_score, mean_squared_error
 import pandas as pd
 import numpy as np
+import smogn
 import joblib
 import argparse
+from sklearn.decomposition import PCA
+from sklearn.feature_selection import SelectKBest, f_regression
 import matplotlib.pyplot as plt
 
-import pandas as pd
-import numpy as np
 
 
 
 
-DF = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/NN G12C Code/merged_features_IC50_g12c_169.csv")
+
+DF = pd.read_csv("/Users/user/PycharmProjects/Drug Design FInal/FINAL_GIT/Raw Files/merged_features_IC50_g12c.csv")
 #DF = DF.dropna()
+
+
 print(len(DF))
 
-DF = DF.drop_duplicates(subset=['Smiles', 'IC50 (nM)'])
+def pIC50(input):
+    pIC50 = []
 
+    input["IC50 (nM)"] = pd.to_numeric(input["IC50 (nM)"],errors='coerce')
+
+    for i in input["IC50 (nM)"]:
+        molar = i*(10**-9) # Converts nM to M
+        pIC50.append(-np.log10(molar))
+
+    input['IC50 (nM)'] = pIC50
+    x = input["IC50 (nM)"]
+
+    return x
+# Filter and sample data before splitting
+DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
+import random
+
+def parse_ic50(val):
+    if isinstance(val, str):
+        if '<' in val:
+            upper = float(val.replace('<', ''))
+            return random.uniform(upper / 10, upper)
+        elif '>' in val:
+            lower = float(val.replace('>', ''))
+            return random.uniform(lower, lower * 10)
+        else:
+            return float(val)
+    return val
+
+
+DF['IC50 (nM)'] = DF['IC50 (nM)'].apply(parse_ic50)
+# Before augmentation
+DF = DF.drop_duplicates(subset=['Smiles', 'IC50 (nM)'])  # Remove exact duplicates
 
 DF = DF.dropna()
 print(len(DF))
 
+DF = DF[(DF['FC'] == 0)] #& (DF['IC50 (nM)'] <= 1)]
+non_feature_cols = ['ChEMBL ID', 'Smiles']
+DF_non_features = DF[non_feature_cols].copy()
 
-def pIC50(input_df):
-    input_df = input_df.copy()
-    input_df["IC50 (nM)"] = pd.to_numeric(input_df["IC50 (nM)"], errors='coerce')
+# Process features and target
+DF_features = DF.drop(columns=non_feature_cols)
+DF_features['pIC50'] = pIC50(DF_features)
 
-    # Replace zeros with a small value (1e-12 nM = 1e-21 M)
-    molar = np.where(input_df["IC50 (nM)"] == 0,
-                     1e-12 * 1e-9,
-                     input_df["IC50 (nM)"] * 1e-9)
-
-    return -np.log10(molar)
-# Filter and sample data before splitting
-DF = DF.loc[:, ~DF.columns.str.contains('^Unnamed')]
-
-#DF['IC50 (nM)'] = DF['IC50 (nM)'].apply(parse_ic50)
-DF = DF.dropna(subset=['IC50 (nM)'])  # Remove rows with invalid IC50
-print(len(DF))
-
-
-
-DF = DF[(DF['FC'] == 0)] #& (DF['IC50 (nM)'] <= 10)]
-y = DF['IC50 (nM)']
+# Apply SMOGN only to features
+df_augmented = smogn.smoter(
+    data=DF_features,
+    y='pIC50',
+    k=5,
+    pert=0.2,
+    samp_method='extreme',
+    rel_thres=0.5
+)
 
 
-DF['pIC50'] = pIC50(DF)  # New column
-DF = DF[DF['pIC50'] <= 20]
-print(len(DF))
-
-y = DF['pIC50']  # <-- Now using correct column
-X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles", "pIC50"])  # Drop old IC50 and new pIC50
+DF_non_features = DF_non_features.reset_index(drop=True)
+df_augmented = df_augmented.reset_index(drop=True)
+DF = pd.concat([df_augmented, DF_non_features], axis=1)
 
 
-from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_regression
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
+df_augmented['pIC50'].hist(bins=50)
+plt.title("Distribution After SMOGN")
+plt.show()
 
-# 1. Get initial feature names
-feature_names = X.columns.tolist()
+print(f"Data size after SMOGN: {len(DF)}")
 
-# 2. Step 1: Variance Threshold (track kept features)
-var_selector = VarianceThreshold(threshold=0.8*(1-0.8))
-X_var = var_selector.fit_transform(X)
-var_mask = var_selector.get_support()
-remaining_features = [feature_names[i] for i in range(len(feature_names)) if var_mask[i]]
-print(f"After VarianceThreshold: {len(remaining_features)} features")
+# Reassign y from augmented data
+y = DF['pIC50']
+# insert the newly generated X
+X = DF.drop(columns=['IC50 (nM)', 'ChEMBL ID', 'Smiles','pIC50'])# Drop old IC50 and new pIC50
+# Add this before cross-validation
 
-# 3. Step 2: Univariate Selection (only on remaining features)
-X_filtered = pd.DataFrame(X_var, columns=remaining_features)
-univariate_selector = SelectKBest(score_func=f_regression, k=min(50, X_filtered.shape[1]))
-X_selected = univariate_selector.fit_transform(X_filtered, y)
-uni_mask = univariate_selector.get_support()
-selected_features = [remaining_features[i] for i in range(len(remaining_features)) if uni_mask[i]]
-print(f"After SelectKBest: {len(selected_features)} features")
+from sklearn.feature_selection import VarianceThreshold
+selector = VarianceThreshold()
+X = selector.fit_transform(X)
+X = pd.DataFrame(X)
 
-# 4. Final output
-X = pd.DataFrame(X_selected, columns=selected_features)
-
-# After feature selection
-joblib.dump(selected_features, 'selected_features.pkl')  # Save feature names
-
-# Scale the data
-# Scale X and y properly
 scaler_X = StandardScaler()
-X_scaled = scaler_X.fit_transform(X)
+X_scaled_data = scaler_X.fit_transform(X)  # Actual scaled data
 
-scaler_y = StandardScaler()  # Changed to StandardScaler
-y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
-
-
+scaler_y = MinMaxScaler()
+y_scaled_data = scaler_y.fit_transform(y.values.reshape(-1, 1))
 
 # joblib.dump(scaler_X, f"scaler_X_{chembel_id}_SV.pkl")
 
@@ -129,43 +141,40 @@ import torch.nn.functional as F
 
 class MultiOutputRegressor(nn.Module):
 
-    def __init__(self, input_dim, hidden_dim, output_dim,
-
-                 num_hidden_layers, dropout_rate):
-
-        super(MultiOutputRegressor, self).__init__()
-
-        layers = [nn.Linear(input_dim, hidden_dim), nn.ReLU()]
-
-        for _ in range(num_hidden_layers - 1):
-
-            layers += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU(),
-
-                       nn.Dropout(dropout_rate)]
-
-        layers.append(nn.Linear(hidden_dim, output_dim))
-
-        self.model = nn.Sequential(*layers)
-
-
+    def __init__(self, input_dim):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
 
     def forward(self, x):
-
-        return self.model(x)
-
+        return self.net(x)
 
 
-for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
+for fold, (train_idx, val_idx) in enumerate(kf.split(X)):
+    # Split raw data first
+    X_train_raw, X_val_raw = X.iloc[train_idx], X.iloc[val_idx]
+    y_train_raw, y_val_raw = y.iloc[train_idx], y.iloc[val_idx]
+
+    # Scale training data and apply to validation
+    scaler_X = StandardScaler()
+    X_train = scaler_X.fit_transform(X_train_raw)
+    X_val = scaler_X.transform(X_val_raw)
+
+    scaler_y = MinMaxScaler()
+    y_train = scaler_y.fit_transform(y_train_raw.values.reshape(-1, 1))
+    y_val = scaler_y.transform(y_val_raw.values.reshape(-1, 1))
 
     print(f"\nFold {fold + 1}/{n_folds}")
 
 
-
-    # Split data into training and validation sets for the current fold
-
-    X_train, X_val = X_scaled[train_idx], X_scaled[val_idx]
-
-    y_train, y_val = y_scaled[train_idx], y_scaled[val_idx]
 
 
 
@@ -191,12 +200,11 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
 
     output_dim = y_train_tensor.shape[1]
 
-    dropout_rate = 0.0  # or try 0.2
+    dropout_rate = 0.0
 
 
 
-
-    model = MultiOutputRegressor(input_dim, hidden_dim, output_dim, num_hidden_layers, dropout_rate)
+    model = MultiOutputRegressor(input_dim)
 
     criterion = nn.SmoothL1Loss(beta=1.0)  # Huber loss
 
@@ -212,9 +220,9 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
 
     val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
 
-    train_loader = DataLoader(train_dataset, batch_size=1024, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 
-    val_loader = DataLoader(val_dataset, batch_size=1024, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
 
 
 
@@ -310,7 +318,9 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
 
     all_mse_scores.append(mse_scores)
 
-
+    # Save scalers from the last fold
+    final_scaler_X = scaler_X
+    final_scaler_y = scaler_y
 
 # Aggregate metrics across folds
 
@@ -360,39 +370,30 @@ print("Training completed. Exporting model for visualization...")
 
 # Inference on the entire dataset
 
+# Inference section - CORRECTED
 model.eval()
-
 with torch.no_grad():
-
-    X_tensor = torch.from_numpy(X_scaled).float()
-
+    # Use the last fold's scaler
+    X_scaled_inference = final_scaler_X.transform(X)
+    X_tensor = torch.from_numpy(X_scaled_inference).float()
     y_pred = model(X_tensor)
 
-
+# Inverse transform predictions with last fold's scaler
+y_pred_test_all = final_scaler_y.inverse_transform(y_pred.cpu().numpy())
+y_test_all = y.values.reshape(-1, 1)  # Original values, no scaling
 
 # Calculate residuals
-
-y_pred_all = y_pred.cpu().numpy()
-
-y_actual_all = y_scaled  # use scaled y for consistency
-
-y_pred_test_all = scaler_y.inverse_transform(y_pred_all)  # Inverse scale predictions
-
-y_test_all = scaler_y.inverse_transform(y_actual_all)  # Inverse scale actual values
-
-residuals = (y_test_all - y_pred_test_all)  # Calculate residuals
+residuals = y_test_all - y_pred_test_all
 
 
 
 # Compute final R² and MSE
 
-final_r2 = r2_score(y_test_all, y_pred_test_all, multioutput='variance_weighted')
+# Compute metrics - CORRECTED
+final_r2 = r2_score(y_test_all, y_pred_test_all)
+MSE = mean_squared_error(y_test_all, y_pred_test_all)
+NMSE = MSE / np.var(y_test_all)
 
-variance_y = np.var(y_test_all)
-
-MSE = mean_squared_error(y_actual_all, y_pred_all)
-
-NMSE = MSE / variance_y
 
 
 
@@ -537,24 +538,35 @@ smiles_column = fda_pred['Smiles']
 
 # Process FDA features (drop non-feature columns)
 
-# Process FDA features
-# 1. Load saved feature names
-selected_features = joblib.load('selected_features.pkl')
+X_new = fda_pred.drop(columns=["FC", "Smiles", "ChEMBL ID"],
 
-# 2. Create empty dataframe with correct columns
-X_new = pd.DataFrame(columns=selected_features)
+                      errors='ignore')
 
-# 3. Fill with FDA data where available
-for feat in selected_features:
-    if feat in fda_pred.columns:
-        X_new[feat] = fda_pred[feat]
-    else:
-        X_new[feat] = 0  # Fill missing with zeros
-        print(f"Added missing feature: {feat}")
+X_new = selector.transform(X_new)
+X_new = pd.DataFrame(X_new)
 
-# 4. Apply scaling ONLY (no feature selection needed)
-X_new_scaled = scaler_X.transform(X_new.values)
+# Ensure X_new has all columns in X_train and in the correct order
 
+number_of_missing_features = 0
+
+for col in X.columns:
+
+    if col not in X_new.columns:
+
+        number_of_missing_features += 1
+
+        X_new[col] = 0  # Add missing columns with zeros
+
+print(number_of_missing_features, "missing features added to X_new")
+
+X_new = X_new[X.columns]  # Reorder columns to match X_train
+
+# Scale new FDA data
+
+# Use the final scaler (from last CV fold) for new predictions
+X_new_scaled = final_scaler_X.transform(X_new)  # Not scaler_X
+
+# Convert to PyTorch tensor
 
 X_new_tensor = torch.from_numpy(X_new_scaled).float()
 
@@ -596,7 +608,7 @@ for chembl_id, predicted_value in zip(chembl_id_column,
 
 
 
-sorted_values = sorted(predicted_values.items(), key=lambda x: x[1], reverse=True)
+sorted_values = sorted(predicted_values.items(), key=lambda x: x[1], reverse= True)
 
 molecules_df = pd.DataFrame(sorted_values[0:11],
 
@@ -606,4 +618,4 @@ molecules_df = pd.DataFrame(sorted_values[0:11],
 
 
 
-molecules_df.to_csv('NN_molecules_Newfeatures_G12C.csv')
+molecules_df.to_csv('NN_molecules_Newfeatures_G12C(1).csv')

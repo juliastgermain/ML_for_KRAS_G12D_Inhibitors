@@ -58,34 +58,11 @@ print(len(DF))
 y = DF['pIC50']  # <-- Now using correct column
 X = DF.drop(columns=["ChEMBL ID", "FC", 'IC50 (nM)', "Smiles", "pIC50"])  # Drop old IC50 and new pIC50
 
-
-from sklearn.feature_selection import VarianceThreshold, SelectKBest, f_regression
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-
-# 1. Get initial feature names
-feature_names = X.columns.tolist()
-
-# 2. Step 1: Variance Threshold (track kept features)
-var_selector = VarianceThreshold(threshold=0.8*(1-0.8))
-X_var = var_selector.fit_transform(X)
-var_mask = var_selector.get_support()
-remaining_features = [feature_names[i] for i in range(len(feature_names)) if var_mask[i]]
-print(f"After VarianceThreshold: {len(remaining_features)} features")
-
-# 3. Step 2: Univariate Selection (only on remaining features)
-X_filtered = pd.DataFrame(X_var, columns=remaining_features)
-univariate_selector = SelectKBest(score_func=f_regression, k=min(50, X_filtered.shape[1]))
-X_selected = univariate_selector.fit_transform(X_filtered, y)
-uni_mask = univariate_selector.get_support()
-selected_features = [remaining_features[i] for i in range(len(remaining_features)) if uni_mask[i]]
-print(f"After SelectKBest: {len(selected_features)} features")
-
-# 4. Final output
-X = pd.DataFrame(X_selected, columns=selected_features)
-
-# After feature selection
-joblib.dump(selected_features, 'selected_features.pkl')  # Save feature names
+from sklearn.feature_selection import VarianceThreshold
+selector = VarianceThreshold()
+X = selector.fit_transform(X)
+X = pd.DataFrame(X)
+print("Number of features after VarianceThreshold:", X.shape[1])
 
 # Scale the data
 # Scale X and y properly
@@ -537,24 +514,35 @@ smiles_column = fda_pred['Smiles']
 
 # Process FDA features (drop non-feature columns)
 
-# Process FDA features
-# 1. Load saved feature names
-selected_features = joblib.load('selected_features.pkl')
+X_new = fda_pred.drop(columns=["FC", "Smiles", "ChEMBL ID"],
 
-# 2. Create empty dataframe with correct columns
-X_new = pd.DataFrame(columns=selected_features)
+                      errors='ignore')
 
-# 3. Fill with FDA data where available
-for feat in selected_features:
-    if feat in fda_pred.columns:
-        X_new[feat] = fda_pred[feat]
-    else:
-        X_new[feat] = 0  # Fill missing with zeros
-        print(f"Added missing feature: {feat}")
 
-# 4. Apply scaling ONLY (no feature selection needed)
-X_new_scaled = scaler_X.transform(X_new.values)
+X_new = selector.transform(X_new)
+X_new = pd.DataFrame(X_new)
 
+# Ensure X_new has all columns in X_train and in the correct order
+
+number_of_missing_features = 0
+
+for col in X.columns:
+
+    if col not in X_new.columns:
+
+        number_of_missing_features += 1
+
+        X_new[col] = 0  # Add missing columns with zeros
+
+print(number_of_missing_features, "missing features added to X_new")
+
+X_new = X_new[X.columns]  # Reorder columns to match X_train
+
+# Scale new FDA data
+
+X_new_scaled = scaler_X.transform(X_new)
+
+# Convert to PyTorch tensor
 
 X_new_tensor = torch.from_numpy(X_new_scaled).float()
 
