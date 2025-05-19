@@ -17,7 +17,7 @@ from sklearn.metrics import r2_score, mean_squared_error
 import pandas as pd
 
 import numpy as np
-
+import matplotlib.pyplot as plt
 import joblib
 
 import argparse
@@ -94,7 +94,7 @@ all_r2_scores = []
 all_mse_scores = []
 
 
-
+all_feature_importances = []
 import torch.nn.functional as F
 
 # Define the neural network model
@@ -193,94 +193,102 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(X_scaled)):
 
     train_losses, val_losses, r2_scores, mse_scores = [], [], [], []
 
-
-
     for epoch in range(num_epochs):
-
         # Training
-
         model.train()
-
         epoch_train_loss = 0
-
         for X_batch, y_batch in train_loader:
-
             optimizer.zero_grad()
-
             y_pred = model(X_batch)
-
             loss = criterion(y_pred, y_batch)
-
             loss.backward()
-
             optimizer.step()
-
             epoch_train_loss += loss.item()
-
         train_losses.append(epoch_train_loss / len(train_loader))
 
-
-
         # Validation
-
         model.eval()
-
         epoch_val_loss = 0
-
         y_pred_val_all, y_val_all = [], []
 
         with torch.no_grad():
-
             for X_batch, y_batch in val_loader:
-
                 y_pred = model(X_batch)
-
                 loss = criterion(y_pred, y_batch)
-
                 epoch_val_loss += loss.item()
-
                 y_pred_val_all.append(y_pred)
-
                 y_val_all.append(y_batch)
 
         val_losses.append(epoch_val_loss / len(val_loader))
 
-
-
         # Calculate R2 score
-
         y_pred_val_all = torch.cat(y_pred_val_all, dim=0).cpu().numpy()
-
         y_val_all = torch.cat(y_val_all, dim=0).cpu().numpy()
-
         r2 = r2_score(y_val_all, y_pred_val_all, multioutput='variance_weighted')
-
         MSE = mean_squared_error(y_val_all, y_pred_val_all)
-
         r2_scores.append(r2)
-
         mse_scores.append(MSE)
 
-
-
         scheduler.step()
+        print(
+            f"Epoch {epoch + 1}/{num_epochs}, Train Loss: {train_losses[-1]:.4f}, Val Loss: {val_losses[-1]:.4f}, R2: {r2:.4f}")
 
+    # --- Feature Importance Calculation (AFTER TRAINING, OUTSIDE EPOCH LOOP) ---
+    model.eval()
+    with torch.no_grad():
+        original_pred = model(X_val_tensor)
+    original_r2 = r2_score(y_val_tensor.numpy(), original_pred.numpy())
 
+    fold_feature_importance = []
+    for feature_idx in range(X_val_tensor.shape[1]):
+        # Clone and shuffle feature
+        X_val_shuffled = X_val_tensor.clone()
+        shuffled_indices = torch.randperm(X_val_shuffled.size(0))
+        X_val_shuffled[:, feature_idx] = X_val_shuffled[shuffled_indices, feature_idx]
 
-        print(f"Epoch {epoch + 1}/{num_epochs}, Train Loss: {train_losses[-1]:.4f}, Val Loss: {val_losses[-1]:.4f}, R2: {r2:.4f}")
+        # Get predictions with shuffled feature
+        with torch.no_grad():
+            shuffled_pred = model(X_val_shuffled)
 
+        # Calculate importance
+        shuffled_r2 = r2_score(y_val_tensor.numpy(), shuffled_pred.numpy())
+        fold_feature_importance.append(original_r2 - shuffled_r2)
 
+    all_feature_importances.append(fold_feature_importance)
+    # --- End Feature Importance ---
 
     # Store metrics for this fold
-
     all_train_losses.append(train_losses)
-
     all_val_losses.append(val_losses)
-
     all_r2_scores.append(r2_scores)
-
     all_mse_scores.append(mse_scores)
 
+average_importances = np.mean(all_feature_importances, axis=0)
+
+# Create DataFrame with feature names
+feature_importance_df = pd.DataFrame({
+    'Feature': X.columns,
+    'Importance': average_importances
+})
+
+# Get top 10 features and sort by importance
+top_10_features = feature_importance_df.nlargest(10, 'Importance').sort_values('Importance', ascending=True)
+print(top_10_features)
+# Plotting with the desired style
+plt.figure(figsize=(12, 8))
+top_10_features.plot.barh(
+    x='Feature',
+    y='Importance',
+    color='skyblue',
+    legend=False
+)
+
+plt.title('Top 10 Features - Permutation Importance')
+plt.xlabel('Mean Accuracy Decrease')
+plt.gca().spines[['right', 'top']].set_visible(False)
+plt.tight_layout()
+plt.savefig('permutation_feature_importance.png', dpi=300, bbox_inches='tight')
+plt.show()
 
 
 # Aggregate metrics across folds
@@ -467,9 +475,9 @@ plt.figure(figsize=(5, 5))
 
 plt.scatter(y_test_all, y_pred_test_all, alpha=0.6, label='SV')
 
-plt.plot([y_test_all.min(), y_test_all.max()],
+plt.plot([2, 12],
 
-         [y_test_all.min(), y_test_all.max()], 'r--', label='line of equality')
+         [2, 12], 'r--', label='line of equality')
 
 
 
@@ -577,7 +585,7 @@ for chembl_id, predicted_value in zip(chembl_id_column,
 
 sorted_values = sorted(predicted_values.items(), key=lambda x: x[1], reverse=True)
 
-molecules_df = pd.DataFrame(sorted_values[0:11],
+molecules_df = pd.DataFrame(sorted_values[0:30],
 
                             columns=['chembl_id', 'Predicted_Value'])
 
