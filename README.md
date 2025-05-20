@@ -1,5 +1,5 @@
 # ML_for_KRAS_G12D_Inhibitors
-This repository contains the code and datasets for predicting the pIC50 value of FDA approved drugs for the KRAS protein through Machine Learning Models. These were used in "Machine Learning-Driven Drug Repurposing for KRAS G12C and KRAS G12D Inhibition"
+This repository contains the code and datasets for predicting the pIC50 value of FDA approved drugs for the KRAS protein through Machine Learning Models. These were used in "Machine Learning-Driven Drug Repurposing for KRAS G12C and KRAS G12D Inhibition" (https://www.biorxiv.org/cgi/content/short/2025.05.16.654410v1)
 
 The code was authored by:
 
