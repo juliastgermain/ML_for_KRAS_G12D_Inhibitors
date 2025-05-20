@@ -602,4 +602,4 @@ molecules_df = pd.DataFrame(sorted_values[0:10],
 
 
 
-molecules_df.to_csv('NN_molecules_Newfeatures_G12C.csv')
+molecules_df.to_csv('NN_Molecules_G12C.csv')

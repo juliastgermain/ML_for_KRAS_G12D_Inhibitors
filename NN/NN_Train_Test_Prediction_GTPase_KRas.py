@@ -540,4 +540,4 @@ molecules_df = pd.DataFrame(sorted_values[0:10],
 
 
 
-molecules_df.to_csv('NN_molecules_Newfeatures_GTPase_KRAS.csv')
+molecules_df.to_csv('NN_Molecules_GTPase_KRAS.csv')
