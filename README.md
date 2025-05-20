@@ -7,6 +7,8 @@ Bebensee, David <br>
 Fuschi, Gianluca <br>
 Moawad, Christophe Mina Fahmy <br>
 St.Germain, Julia <br>
+Mohamed, Ashraf <br>
+Amin, Muhamed <br>
 
 The outputs of the Extractfeatures files are already available as .csv files so there is no need to rerun any of the code. But if you would want to, here is how to: 
 Run the files in the folder 'Extract_features'. This code generates the features for each of the dataset. The ouput is a csv file that looks like this '<molecule>_training.csv'.
