@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 
-DF = pd.read_csv('../Raw Files/GTPase_training.csv')
+DF = pd.read_csv('../Raw_Files/GTPase_training.csv')
 
 DF = DF.dropna()
 
@@ -451,7 +451,7 @@ plt.show()
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("../Raw Files/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("../Raw_Files/FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
