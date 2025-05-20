@@ -8,15 +8,14 @@ Fuschi, Gianluca <br>
 Moawad, Christophe Mina Fahmy <br>
 St.Germain, Julia <br>
 
-Instructions on use
-The outputs of the Extractfeatures files are already available as .csv files so there is no need to rerun any of the code. But if you would want to, here is the order and what each file does:
+The outputs of the Extractfeatures files are already available as .csv files so there is no need to rerun any of the code. But if you would want to, here is how to: 
+Run the files in the folder 'Extract_features'. This code generates the features for each of the dataset. The ouput is a csv file that looks like this '<molecule>_training.csv'.
+The three outputs are all stored in the Raw_files folder. 
 
-Run the files in the folder 'Extract_features'. This code generates the features for each of the datasets
+To produce the list of top 10 molecules per model for each dataset, here is how it is setup:
+The NN folder contains the files to run a prediction with the Neural Network for the respective datasets. 
+The RF folder contains separate files for training + testing and prediction with the Random Forest for the respective datasets. 
+Each prediction file will output a csv file with the top 10 molecules with the highest pIC50 value.
 
-Run the removing_outliers.ipnyb and remove the outliers from the training_descriptors.csv and output training_descriptors_no_outliers.csv This code runs for 50 iterations and identifies outliers that occur multiple times. The top 8 outliers will then be removed from the dataset. We need to ask Muhamed if he also removed outliers from his file already or not.
 
-Run the transform_fda.ipnyb file on the fda.csv file which we got from the ChEMBL databast by filtering approved and 1 or less Rule of 5 violations, you will end up with the FDA_features.csv. This code runs the same function that generates 209 descriptors with RDkit as data_fetch_ChEMBL_KRAS.ipnyb We use the lateest fda approved drugs normally, but then we use Muhamed's new code of extract features to generate the file fda_original_Hyb_Fetures3.csv
 
-Run the prediction_code.ipnyb file with the FDA_features.csv and training_descriptors_no_outliers.csv, you will receive the all_results.csv. This code outputs a file which contains the best 13 molecules that appeared over 50 iterations of runs. Values are IC50 so we use the code of pIC50 to change the values. Then we run the prediction code with Muhamed"s file for training and predict for fda_original_Hyb_Fetures3.csv
-
-maybe see how to change the code to submit more streamlined results.
