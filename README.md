@@ -1,5 +1,5 @@
 # ML_for_KRAS_G12D_Inhibitors
-This repository contains the code and datasets for predicting the pIC50 value of FDA approved drugs for the KRAS protein through Machine Learning Models. These were used in "insert article name here! and add DOI"
+This repository contains the code and datasets for predicting the pIC50 value of FDA approved drugs for the KRAS protein through Machine Learning Models. These were used in "Machine Learning-Driven Drug Repurposing for KRAS G12C and KRAS G12D Inhibition"
 
 The code was authored by:
 
@@ -9,9 +9,9 @@ Moawad, Christophe Mina Fahmy <br>
 St.Germain, Julia <br>
 
 Instructions on use
-All of the outputs are already available as .csv files so there is no need to rerun any of the code. But if you would want to, here is the order and what each file does:
+The outputs of the Extractfeatures files are already available as .csv files so there is no need to rerun any of the code. But if you would want to, here is the order and what each file does:
 
-Run the data_fetch_ChEMBL_KRAS.ipnyb file to get the training_descriptors.csv. This code accesses a ChEMBL webclient and saves all molecules that have a recorded IC50 with the GTPase KRas molecule (CHEMBL2189121). Then using the RDkit Library we generate 209 descriptors from the SMILES code of each molecule. Before being exported the IC50 are being standardized to pIC50. Muhamed's file already has the new and old descriptors, so we need to ask what code he used to generate the features like we did in the step above.
+Run the files in the folder 'Extract_features'. This code generates the features for each of the datasets
 
 Run the removing_outliers.ipnyb and remove the outliers from the training_descriptors.csv and output training_descriptors_no_outliers.csv This code runs for 50 iterations and identifies outliers that occur multiple times. The top 8 outliers will then be removed from the dataset. We need to ask Muhamed if he also removed outliers from his file already or not.
 
