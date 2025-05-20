@@ -309,7 +309,6 @@ plt.title('Top 10 Features - Permutation Importance')
 plt.xlabel('Mean Accuracy Decrease')
 plt.gca().spines[['right', 'top']].set_visible(False)
 plt.tight_layout()
-plt.savefig('permutation_feature_importance.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 # Aggregate metrics across folds
@@ -517,8 +516,6 @@ clean_plot(plt.gca())
 plt.subplots_adjust(bottom=0.2)
 
 plt.tight_layout()
-
-plt.savefig(f"Actual_vs_Predicted_G12C_SV.png", dpi=300)
 
 plt.show()
 
