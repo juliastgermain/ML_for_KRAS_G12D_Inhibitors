@@ -18,7 +18,7 @@ from matplotlib.ticker import FormatStrFormatter
 
 
 
-DF = pd.read_csv("../Raw Files/G12C_training.csv")
+DF = pd.read_csv("../Raw_Files/G12C_training.csv")
 print(len(DF))
 
 DF = DF.drop_duplicates(subset=['Smiles', 'IC50 (nM)'])
@@ -524,7 +524,7 @@ plt.show()
 
 predicted_values = {}
 
-fda_pred = pd.read_csv("../Raw Files/FDA_Hyb_Features.csv")
+fda_pred = pd.read_csv("../Raw_Files/FDA_Hyb_Features.csv")
 
 chembl_id_column = fda_pred['ChEMBL ID']
 
