@@ -38,24 +38,27 @@ We developed **Random Forest** and **Neural Network** models to predict drug act
 ## 📊 Project Structure
 ```
 ML_for_KRAS_G12D_Inhibitors/
-├── Extract_features/          # Feature extraction from molecular structures
-│   ├── G12C_extract.py
-│   ├── G12D_extract.py
-│   └── FDA_extract.py
-├── NN/                        # Neural Network models
-│   ├── G12C_NN.py
-│   ├── G12D_NN.py
-│   └── FDA_NN.py
-├── RF/                        # Random Forest models
-│   ├── G12C_RF_train_test.py
-│   ├── G12C_RF_predict.py
-│   ├── G12D_RF_train_test.py
-│   ├── G12D_RF_predict.py
-│   └── FDA_RF_predict.py
-├── Raw_files/                 # Pre-computed features (CSV)
+├── Extract_Features/              # Feature extraction from molecular structures
+│   ├── G12C_Extractfeatures.ipynb
+│   ├── G12D_Extractfeatures.ipynb
+│   ├── GTPase_KRas_Extractfeatures.ipynb
+│   └── Hybrid.py
+├── NN/                            # Neural Network models
+│   ├── NN_Train_Test_Prediction_G12C.ipynb
+│   ├── NN_Train_Test_Prediction_G12D.ipynb
+│   └── NN_Train_Test_Prediction_GTPase.ipynb
+├── RF/                            # Random Forest models
+│   ├── RF_Train_Test_G12C.ipynb           # Training & testing
+│   ├── RF_Train_Test_G12D.ipynb
+│   ├── RF_Train_Test_GTPase_KRas.ipynb
+│   ├── RF_Prediction_G12C.ipynb           # Predictions on FDA drugs
+│   ├── RF_Prediction_G12D.ipynb
+│   └── RF_Prediction_GTPase_KRas.ipynb
+├── Raw_Files/                     # Pre-computed molecular features (CSV)
 │   ├── G12C_training.csv
 │   ├── G12D_training.csv
-│   └── FDA_drugs.csv
+│   └── FDA_approved_drugs.csv
+├── Quality_of_Life/               # Utility scripts and helpers
 ├── requirements.txt
 └── README.md
 ```
